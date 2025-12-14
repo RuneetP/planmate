@@ -25,10 +25,10 @@ export default function Home() {
     url: 'https://www.youtube.com/@KaraandNate',
   },
   {
-    name: 'Rick Steves',
+    name: 'Mark Wiens',
     platform: 'Blog / YouTube',
-    description: 'Classic cultural and European travel guidance',
-    url: 'https://www.youtube.com/@RickSteves',
+    description: 'Unique food experiences & travel guides',
+    url: 'https://www.youtube.com/@MarkWiens',
   },
 ]
 
