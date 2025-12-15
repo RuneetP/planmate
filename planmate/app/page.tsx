@@ -256,7 +256,14 @@ function generateAdvancedItinerary() {
     return
   }
 
-  const numberOfDays = getDaysBetween(startDate, endDate)
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+
+  const numberOfDays =
+    Math.ceil(
+      (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+    ) + 1
+
   const days = []
 
   for (let i = 1; i <= numberOfDays; i++) {
@@ -396,12 +403,18 @@ function generateAdvancedItinerary() {
         <div className="grid md:grid-cols-2 gap-4">
           <input
             type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
             className="px-4 py-3 rounded-lg bg-[#161616] border border-neutral-700"
           />
+
           <input
             type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
             className="px-4 py-3 rounded-lg bg-[#161616] border border-neutral-700"
           />
+
         </div>
 
         <div className="grid md:grid-cols-3 gap-4">
