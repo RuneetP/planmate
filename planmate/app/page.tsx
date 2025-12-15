@@ -5,11 +5,127 @@ import { motion } from 'framer-motion'
 import { useState } from 'react'
 
 
+// Step 1D: Pace → number of activities
+function getActivitiesPerDay(pace: string) {
+  const normalized = (pace || "").toLowerCase()
+
+  if (normalized === "relaxed") return 2
+  if (normalized === "packed") return 5
+
+  return 3 // balanced default
+}
+
+
+function generateTimeSlots(
+  startTime: string,
+  endTime: string,
+  count: number
+) {
+  const start = parseInt(startTime.split(':')[0], 10)
+  const end = parseInt(endTime.split(':')[0], 10)
+
+  const totalHours = end - start
+  const gap = Math.floor(totalHours / count)
+
+  const times: string[] = []
+
+  for (let i = 0; i < count; i++) {
+    const hour = start + i * gap
+    times.push(`${hour.toString().padStart(2, '0')}:00`)
+  }
+
+  return times
+}
+
+// Step 1A: Activity pools
+const activityPool: Record<string, string[]> = {
+  food: [
+    "Local breakfast café",
+    "Street food exploration",
+    "Traditional lunch spot",
+    "Dinner at a local speciality restaurant",
+  ],
+  culture: [
+    "Visit a historical landmark",
+    "Museum or gallery visit",
+    "Old town walking tour",
+    "Local cultural performance",
+  ],
+  nature: [
+    "Morning nature walk",
+    "Park or botanical garden visit",
+    "Scenic viewpoint",
+    "Sunset outdoor relaxation",
+  ],
+}
+
+// Step 1B: Parse interests input
+function parseInterests(input: string): Array<"food" | "culture" | "nature"> {
+  const lower = (input || "").toLowerCase()
+  const result: Array<"food" | "culture" | "nature"> = []
+
+  if (lower.includes("food")) result.push("food")
+  if (lower.includes("culture")) result.push("culture")
+  if (lower.includes("nature")) result.push("nature")
+
+  return result.length ? result : ["culture"]
+}
+
+
 export default function Home() {
   const [mode, setMode] = useState<'basic' | 'advanced'>('basic')
   const [itinerary, setItinerary] = useState<any[] | null>(null)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [advancedInterests, setAdvancedInterests] = useState('')
+  const [pace, setPace] = useState('balanced')
+  const [startTime, setStartTime] = useState('08:00')
+  const [endTime, setEndTime] = useState('20:00')
+
+
+
+/* ===== Step 1C: Generate one smart day ===== */
+function generateAdvancedDay(
+  dayNumber: number,
+  interestsInput: string,
+  pace: string,
+  startTime: string,
+  endTime: string
+) {
+  const interests = parseInterests(interestsInput)
+  const maxActivities = getActivitiesPerDay(pace)
+
+  const activities: string[] = []
+
+  let poolIndex = 0
+
+  while (activities.length < maxActivities) {
+    const interest = interests[poolIndex % interests.length]
+    const pool = activityPool[interest]
+
+    const activity =
+      pool[(dayNumber + activities.length) % pool.length]
+
+    activities.push(activity)
+    poolIndex++
+  }
+const times = generateTimeSlots(
+  startTime,
+  endTime,
+  activities.length
+)
+
+const timedActivities = activities.map((activity, index) => {
+  return `${times[index]} – ${activity}`
+})
+
+return {
+  day: dayNumber,
+  title: `Day ${dayNumber} — ${pace} pace`,
+  activities: timedActivities,
+}
+
+}
 
   const travelCreators = [
   {
@@ -109,55 +225,54 @@ function exportItineraryToPDF() {
   return days
 }
 
-  function generateBasicItinerary() {
-  // guard: must choose both dates
+function generateBasicItinerary() {
   if (!startDate || !endDate) {
     alert('Please select start and end dates')
     return
   }
 
-  const days = getDaysBetween(startDate, endDate)
+  const totalDays = getDaysBetween(startDate, endDate)
+  const generated = []
 
-  const generated = Array.from({ length: days }, (_, i) => ({
-    day: i + 1,
-    title: `Day ${i + 1} highlights`,
-    activities: [
-      'Morning exploration',
-      'Lunch break',
-      'Afternoon sightseeing',
-      'Evening relax',
-    ],
-  }))
+  for (let i = 1; i <= totalDays; i++) {
+    generated.push(
+      generateAdvancedDay(
+        i,
+        'culture',
+        'balanced',
+        '09:00',
+        '18:00'
+      )
+    )
+  }
 
   setItinerary(generated)
 }
 
 
 function generateAdvancedItinerary() {
-  setItinerary([
-    {
-      day: 1,
-      title: '08:00 – 20:00 | Structured day',
-      activities: [
-        '08:00 Breakfast',
-        '09:00 Must-visit attraction',
-        '13:00 Lunch',
-        '15:00 Secondary activity',
-        '19:00 Dinner',
-      ],
-    },
-    {
-      day: 2,
-      title: 'Custom paced exploration',
-      activities: [
-        'Morning nature walk',
-        'Midday rest',
-        'Evening cultural event',
-      ],
-    },
-  ])
-}
+  if (!startDate || !endDate) {
+    alert('Please select start and end dates')
+    return
+  }
 
+  const numberOfDays = getDaysBetween(startDate, endDate)
+  const days = []
+
+  for (let i = 1; i <= numberOfDays; i++) {
+    days.push(
+      generateAdvancedDay(
+        i,
+        advancedInterests,
+        pace,
+        startTime,
+        endTime
+      )
+    )
+  }
+
+  setItinerary(days)
+}
 
   return (
     <main className="bg-[#0a0a0a] text-white min-h-screen font-sans">
@@ -292,18 +407,37 @@ function generateAdvancedItinerary() {
         <div className="grid md:grid-cols-3 gap-4">
           <input
             placeholder="Daily start time (e.g. 8:00)"
+            value={startTime}
+            onChange={(e) => setStartTime(e.target.value)}
             className="px-4 py-3 rounded-lg bg-[#161616] border border-neutral-700"
           />
+
           <input
             placeholder="Daily end time (e.g. 20:00)"
+            value={endTime}
+            onChange={(e) => setEndTime(e.target.value)}
             className="px-4 py-3 rounded-lg bg-[#161616] border border-neutral-700"
           />
-          <select className="px-4 py-3 rounded-lg bg-[#161616] border border-neutral-700">
-            <option>Balanced pace</option>
-            <option>Packed</option>
-            <option>Relaxed</option>
+
+          <select
+             value={pace}
+             onChange={(e) => setPace(e.target.value)}
+             className="px-4 py-3 rounded-lg bg-[#161616] border border-neutral-700"
+>
+             <option value="balanced">Balanced pace</option>
+             <option value="packed">Packed</option>
+             <option value="relaxed">Relaxed</option>
           </select>
+
         </div>
+
+          <input
+             type="text"
+             placeholder="Interests (food, culture, nature)"
+             value={advancedInterests}
+             onChange={(e) => setAdvancedInterests(e.target.value)}
+             className="mt-4 px-4 py-3 rounded-lg bg-[#161616] border border-neutral-700"
+          />
 
         <input
           placeholder="Must-visit places (comma separated)"
